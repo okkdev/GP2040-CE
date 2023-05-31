@@ -1,37 +1,39 @@
 #include "addons/extra_button.h"
 #include "storagemanager.h"
 #include "hardware/gpio.h"
+#include "helper.h"
+#include "config.pb.h"
 
 bool ExtraButtonAddon::available() {
-	AddonOptions options = Storage::getInstance().getAddonOptions();
-	extraButtonMap = options.extraButtonMap;
-	extraButtonPin = options.extraButtonPin;
-	return options.ExtraButtonAddonEnabled &&
-		extraButtonMap != 0 &&
-		extraButtonPin != (uint8_t)-1;
+    const ExtraButtonOptions& options = Storage::getInstance().getAddonOptions().extraButtonOptions;
+	return options.enabled && options.buttonMap != 0 && isValidPin(options.pin);
 }
 
 void ExtraButtonAddon::setup() {
+    const ExtraButtonOptions& options = Storage::getInstance().getAddonOptions().extraButtonOptions;
+	extraButtonMap = options.buttonMap;
+	extraButtonPin = options.pin;
+
 	gpio_init(extraButtonPin);             // Initialize pin
 	gpio_set_dir(extraButtonPin, GPIO_IN); // Set as INPUT
 	gpio_pull_up(extraButtonPin);          // Set as PULLUP
 }
 
-void ExtraButtonAddon::process() {
+void ExtraButtonAddon::preprocess() {
 	Gamepad * gamepad = Storage::getInstance().GetGamepad();
 	if (!gpio_get(extraButtonPin)) {
 		if (extraButtonMap > (GAMEPAD_MASK_A2)) {
 			switch (extraButtonMap) {
-				case (1U << 14):
+				case (GAMEPAD_MASK_DU):
 					gamepad->state.dpad |= GAMEPAD_MASK_UP;
 					break;
-				case (1U << 15):
+				case (GAMEPAD_MASK_DD):
 					gamepad->state.dpad |= GAMEPAD_MASK_DOWN;
 					break;
-				case (1U << 16):
+				case (GAMEPAD_MASK_DL):
 					gamepad->state.dpad |= GAMEPAD_MASK_LEFT;
 					break;
-				case (1U << 17):
+				case (GAMEPAD_MASK_DR):
 					gamepad->state.dpad |= GAMEPAD_MASK_RIGHT;
 					break;
 			}

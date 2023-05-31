@@ -1,5 +1,7 @@
 #include "addons/analog.h"
 #include "storagemanager.h"
+#include "helper.h"
+#include "config.pb.h"
 
 #include "hardware/adc.h"
 
@@ -8,28 +10,34 @@
 #define ANALOG_DEADZONE 0.05f // move to config (future release)
 
 bool AnalogInput::available() {
-    AddonOptions options = Storage::getInstance().getAddonOptions();
-	analogAdcPinX = Storage::getInstance().getAddonOptions().analogAdcPinX;
-	analogAdcPinY = Storage::getInstance().getAddonOptions().analogAdcPinY;
-    return options.AnalogInputEnabled &&
-            analogAdcPinX != (uint8_t)-1 && 
-            analogAdcPinY != (uint8_t)-1;
+    return Storage::getInstance().getAddonOptions().analogOptions.enabled;
 }
 
 void AnalogInput::setup() {
-    adc_init();
+    const AnalogOptions& options = Storage::getInstance().getAddonOptions().analogOptions;
+	analogAdcPinX = options.analogAdcPinX;
+	analogAdcPinY = options.analogAdcPinY;
+
     // Make sure GPIO is high-impedance, no pullups etc
-    adc_gpio_init(analogAdcPinX);
-    adc_gpio_init(analogAdcPinY);
+    if ( isValidPin(analogAdcPinX) )
+        adc_gpio_init(analogAdcPinX);
+    if ( isValidPin(analogAdcPinY) )
+        adc_gpio_init(analogAdcPinY);
 }
 
 void AnalogInput::process()
 {
     Gamepad * gamepad = Storage::getInstance().GetGamepad();
-    adc_select_input(0); // ANALOG-X
-    float adc_x = ((float)adc_read())/ADC_MAX;
-    adc_select_input(1); // ANALOG-Y
-    float adc_y = ((float)adc_read())/ADC_MAX;
+    float adc_x = ANALOG_CENTER;
+    float adc_y = ANALOG_CENTER;
+    if ( isValidPin(analogAdcPinX) ) {
+        adc_select_input(analogAdcPinX-26); // ANALOG-X
+        adc_x = ((float)adc_read())/ADC_MAX;
+    }
+    if ( isValidPin(analogAdcPinY) ) {
+        adc_select_input(analogAdcPinY-26); // ANALOG-Y
+        adc_y = ((float)adc_read())/ADC_MAX;
+    }
     if ( abs(adc_x - ANALOG_CENTER) < ANALOG_DEADZONE ) // deadzones
         adc_x = ANALOG_CENTER;
     if ( abs(adc_y - ANALOG_CENTER) < ANALOG_DEADZONE ) // deadzones

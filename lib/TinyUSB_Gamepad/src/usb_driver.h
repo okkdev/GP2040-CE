@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include "GamepadDescriptors.h"
+#include "gamepad/GamepadDescriptors.h"
+#include "enums.pb.h"
 
 typedef enum
 {
